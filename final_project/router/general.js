@@ -28,36 +28,47 @@ public_users.get('/isbn/:isbn',function (req, res) {
 
 
  });
-  
+   
 // Get book details based on author
 public_users.get('/author/:author',function (req, res) {
     const author = req.params.author;
 
-    authorExists = (author) => {
-        let authorsOfBooks = books.filter((author) => {
-            return books.author === author;
-        })
-        return authorsOfBooks.length > 0;
-    }
+    const authorOfBooks = Object.values(books).filter(
+        (books) => books.author === author
+      )
+      if (authorOfBooks.length === 0) {
+        res.send('The database does not containy any books of this author')
+      } else {
+        res.send(authorOfBooks)
+      }
+    });
 
-    if(authorExists){
-        res.send(books[author]);
-    } else {
-        res.send("The author searched for is not in the database");
-    }
-
-});
 
 // Get all books based on title
 public_users.get('/title/:title',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    const title = req.params.title;
+
+    const titleOfBooks = Object.values(books).filter(
+        (books) => books.title === title
+    )
+    if(titleOfBooks.length === 0){
+        res.send('The database does not contain any book with this title')
+    } else {
+        res.send(titleOfBooks)
+    }
 });
 
 //  Get book review
 public_users.get('/review/:isbn',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    const isbn = req.params.isbn;
+    const book = books[isbn];
+
+    if(!book || !book.reviews){
+        res.send("No review for the book with the isbn "+isbn+ " was found")
+    } else {
+        res.send(book.reviews)
+    }
+
 });
 
 module.exports.general = public_users;
