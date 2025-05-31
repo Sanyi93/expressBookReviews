@@ -12,20 +12,40 @@ public_users.post("/register", (req,res) => {
 
 // Get the book list available in the shop
 public_users.get('/',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    //Stringifying the output
+  return res.send(JSON.stringify(books));
 });
 
 // Get book details based on ISBN
 public_users.get('/isbn/:isbn',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    const isbn = req.params.isbn;
+
+    if(isbn > 0 && isbn < 11){
+        res.send(books[isbn])
+    } else {
+        res.send("The book with isbn " + isbn + " has not been found. Try again later, please");
+    }
+
+
  });
   
 // Get book details based on author
 public_users.get('/author/:author',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    const author = req.params.author;
+
+    authorExists = (author) => {
+        let authorsOfBooks = books.filter((author) => {
+            return books.author === author;
+        })
+        return authorsOfBooks.length > 0;
+    }
+
+    if(authorExists){
+        res.send(books[author]);
+    } else {
+        res.send("The author searched for is not in the database");
+    }
+
 });
 
 // Get all books based on title
