@@ -113,6 +113,51 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
 
 });
 
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+    const isbn = req.params.isbn;
+
+    //authorizationHeader
+    const authorizationHeader = req.header('Authorization');
+    if(!authorizationHeader || !authorizationHeader.startsWith('Bearer ')){
+        return res.status(401).json({message: "Authorization header incorrect"});
+    }
+
+    //accessToken by replacing
+    const accessToken = authorizationHeader.replace('Bearer ', '');
+
+    try {
+        const decodedUser = jwt.verify(accessToken, SECRET_KEY);
+        //extracting username from the token
+        const reviewerUsername = decodedUser.username;
+
+        //searching for the book
+        let book = books.find((book) => book.isbn === isbn);
+
+        if(!book){
+            return res.status(404).json({message: "No book with this isbn found"});
+        }
+
+        //if the book does not possess any any review than reviews Object is to be empty
+        if (!book.reviews) {
+            book.reviews = {};
+        }
+
+         //checking if the user has written the review
+        if(Object.prototype.hasOwnProperty.call(book.reviews, reviewerUsername)){
+            //if yes
+            
+            delete book.reviews[reviewerUsername];
+            return res.status(200).json({message: "Your review has been successfully deleted"});
+        } else {
+            return res.status(404).json({message: "No review for this book written by you found"});
+        }
+
+    } catch (error){
+        console.error("Access token invalid: ", error);
+        return res.status(401).json({message: "The user unauthorized or session expired"});
+    }
+});
+
 module.exports.authenticated = regd_users;
 module.exports.isValid = isValid;
 module.exports.users = users;
