@@ -5,6 +5,10 @@ const regd_users = express.Router();
 
 let users = [];
 const SECRET_KEY = 'fingerprint_customer';
+const testUserPayload = { username: 'TOMAS', role: 'customer' };
+const accessToken = jwt.sign(testUserPayload, SECRET_KEY, { expiresIn: '1h' });
+console.log('Generated Test Token:', accessToken);
+// Copy this token for your curl commands
 
 const isValid = (username) => { //returns boolean
     //filtering the valid users
@@ -41,9 +45,7 @@ regd_users.post("/login", (req,res) => {
     }
     // Authenticate user
     if(authenticatedUser(username, password)){
-        let accessToken = jwt.sign({
-            data: password
-        }, 'access', { expiresIn: 60 * 60});
+        const accessToken = jwt.sign(testUserPayload, SECRET_KEY, { expiresIn: '60 * 60' });
 
         //storing accessToken & username in session
         req.session.authorization = {
@@ -58,35 +60,55 @@ regd_users.post("/login", (req,res) => {
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
-    const isbn = req.query.isbn;
-    const review = req.query.review;
-    const accessToken = req.header('Authorization').replace('Bearer', '')
+
+    const isbn = req.params.isbn;
+    const reviewText = req.body.review;
+
+    //authorizationHeader
+    const authorizationHeader = req.header('Authorization');
+    if(!authorizationHeader || !authorizationHeader.startsWith('Bearer ')){
+        return res.status(401).json({message: "Authorization header incorrect"});
+    }
+
+    //accessToken by replacing
+    const accessToken = authorizationHeader.replace('Bearer ', '');
 
     try {
         const decodedUser = jwt.verify(accessToken, SECRET_KEY);
-        const user = users.find((user) => user.username === decodedUser.username);
+        //extracting username from the token
+        const reviewerUsername = decodedUser.username;
 
-        if(!books[isbn]){
-            return res.status(404).json({ message: "No book with the isbn provided found"});
+        if(!reviewText){
+            return res.status(400).json({message: "Review content required"});   
         }
-        //if no review has been added to the book, then it has no review
-        if(!books[isbn].reviews){
-            books[isbn].reviews = []
-        }
-        // bookReviews array
-        const bookReviews = books[isbn].reviews;
-        //author of review
-        const reviewUserAuthor = Object.keys(bookReviews).find((review) => review.username === user);
 
-        if(reviewUserAuthor){
-            books[isbn].reviews[user] = review;
-            return res.status(400).json({ message: "Your review has been updated"});
+        //searching for the book
+        let book = books.find((book) => book.isbn === isbn);
+
+        if(!book){
+            return res.status(404).json({message: "No book with this isbn found"});
+        }
+
+        //if the book does not possess any any review than reviews Object is to be empty
+        if (!book.reviews) {
+            book.reviews = {};
+        }
+
+      
+
+        //checking if the user has already written a review for the book with this particular isbn
+        if(Object.prototype.hasOwnProperty.call(book.reviews, reviewerUsername)){
+            //if yes
+            book.reviews[reviewerUsername] = reviewText;
+            return res.status(200).json({message: "Your review has been successfully updated"});
         } else {
-            books[isbn].reviews[user] = books[isbn].reviews[user].push(review);
-            return res.status(200).json({message: "Your review has been added"});
+            book.reviews[reviewerUsername] = reviewText;
+            return res.status(201).json({message: "Your review has been successfully added"});
         }
-    } catch (error) {
-        res.status(400).send('Authorization invalid')
+
+    } catch (error){
+        console.error("Access token invalid: ", error);
+        return res.status(401).json({message: "The user unauthorized or session expired"});
     }
 
 });
